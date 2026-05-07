@@ -31,6 +31,10 @@ sudo rm -rf "$DKMS_SRC"
 sudo cp -r "$TMP_DIR/snd_hda_macbookpro" "$DKMS_SRC"
 
 sudo dkms add -m "$DKMS_NAME" -v "$DKMS_VER"
+
+# Fix BUILT_MODULE_LOCATION: kernel >=6.17 builds to codecs/cirrus/ subdir
+sudo sed -i 's|BUILT_MODULE_LOCATION\[0\]="build/hda"|BUILT_MODULE_LOCATION[0]="build/hda/codecs/cirrus"|' "$DKMS_SRC/dkms.conf"
+
 sudo dkms build "${DKMS_NAME}/${DKMS_VER}"
 sudo dkms install "${DKMS_NAME}/${DKMS_VER}"
 
