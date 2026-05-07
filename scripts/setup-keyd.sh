@@ -6,34 +6,20 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "=== Keyboard Customization Setup (keyd) ==="
 
-# 1. Install keyd via AUR
-echo "[1/5] Installing keyd..."
-if ! command -v yay &>/dev/null; then
-    echo "ERROR: yay is required. Install it first: https://github.com/Jguer/yay"
-    exit 1
-fi
-yay -S --noconfirm keyd
+# 1. Install keyd from official repo (extra)
+echo "[1/3] Installing keyd..."
+sudo pacman -S --noconfirm keyd
 
-# 2. Disable interception-tools if present (replaced by keyd)
-echo "[2/5] Disabling interception-tools (if installed)..."
+# 2. Disable interception-tools if present, install config, enable service
+echo "[2/3] Configuring keyd service..."
 sudo systemctl stop udevmon 2>/dev/null || true
 sudo systemctl disable udevmon 2>/dev/null || true
-
-# 3. Install keyd config
-echo "[3/5] Installing keyd config..."
 sudo cp "${REPO_DIR}/driver/keyd/macbook-internal.conf" /etc/keyd/macbook-internal.conf
 sudo systemctl enable --now keyd
 sudo systemctl restart keyd
 
-# 4. GNOME keybindings: Super+Space -> Activities, remove input source switching
-echo "[4/5] Configuring GNOME keybindings..."
-gsettings set org.gnome.mutter overlay-key ''
-gsettings set org.gnome.shell.keybindings toggle-overview "['<Super>space']"
-gsettings set org.gnome.desktop.wm.keybindings switch-input-source "[]"
-gsettings set org.gnome.desktop.wm.keybindings switch-input-source-backward "[]"
-
-# 5. fcitx5: Henkan = activate (かな), Muhenkan = deactivate (英数)
-echo "[5/5] Configuring fcitx5 hotkeys..."
+# 3. fcitx5: Henkan = activate (かな), Muhenkan = deactivate (英数)
+echo "[3/3] Configuring fcitx5 hotkeys..."
 FCITX5_CONFIG="${HOME}/.config/fcitx5/config"
 if [ -f "$FCITX5_CONFIG" ]; then
     sed -i 's/^0=Alt+Alt_R$/0=Henkan/' "$FCITX5_CONFIG"
@@ -49,6 +35,5 @@ echo "=== Done ==="
 echo "  CapsLock tap=Escape / hold=Ctrl"
 echo "  Left Command tap=英数 (Muhenkan) / hold=Super"
 echo "  Right Command tap=かな (Henkan) / hold=Super"
-echo "  Super+Space = Activities"
 echo ""
 echo "Reboot recommended to fully apply keyd."

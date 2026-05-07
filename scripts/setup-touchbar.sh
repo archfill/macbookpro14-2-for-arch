@@ -10,28 +10,26 @@ DEST="/usr/src/${DKMS_NAME}-${DKMS_VER}"
 
 echo "=== Touch Bar Driver Setup (DKMS) ==="
 
-echo "[0/4] Installing dependencies..."
-# Use linux-headers for the default kernel.
-# For LTS kernel use linux-lts-headers instead.
-sudo pacman -S --noconfirm dkms base-devel linux-headers
+echo "[1/3] Installing dependencies..."
+KERNEL_HEADERS="linux-headers"
+if uname -r | grep -q "\-lts$"; then
+    KERNEL_HEADERS="linux-lts-headers"
+fi
+sudo pacman -S --noconfirm dkms base-devel "$KERNEL_HEADERS"
 
-# Remove existing DKMS registration
+echo "[2/3] Building and installing DKMS module..."
 sudo dkms remove "${DKMS_NAME}/${DKMS_VER}" --all 2>/dev/null || true
 sudo rm -rf "$DEST"
-
-# Copy source -> DKMS add -> build -> install
 sudo cp -r "$DRIVER_DIR" "$DEST"
 sudo dkms add "${DKMS_NAME}/${DKMS_VER}"
 sudo dkms build "${DKMS_NAME}/${DKMS_VER}"
 sudo dkms install "${DKMS_NAME}/${DKMS_VER}"
 
-# udev rules
 sudo cp "$UDEV_DIR/91-apple-touchbar.rules" /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 
-# modprobe options (fnmode=2: default fn keys, fn pressed = special keys)
+# fnmode=2: default fn keys, fn pressed = special keys
 sudo cp "$MODPROBE_DIR/apple-touchbar.conf" /etc/modprobe.d/
 
-echo ""
-echo "Done. Reboot to activate Touch Bar."
+echo "[3/3] Done. Reboot to activate Touch Bar."
 echo "  Manual test: sudo modprobe apple-ibridge && sudo modprobe apple-ib-tb"

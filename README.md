@@ -39,7 +39,7 @@ sudo reboot
 
 ---
 
-### 1. 汎用パッケージ（バッテリー・温度・明るさ・ファン）
+### 1. 汎用パッケージ（バッテリー・明るさ・ファン）
 
 ```bash
 ./scripts/setup-base.sh
@@ -58,9 +58,8 @@ sudo reboot
 
 スクリプトが行うこと:
 
-1. `b43-firmware`（AUR）をインストール
-2. NVRAM ファイル（`brcmfmac43602-pcie.txt`）を取得・インストール → 5GHz 有効化
-3. 送信電力制限サービス（`set-wifi-power.service`）を配置・有効化
+1. NVRAM ファイル（`brcmfmac43602-pcie.txt`）を取得・インストール → 5GHz 有効化
+2. 送信電力制限サービス（`set-wifi-power.service`）を配置・有効化
 
 再起動後、5GHz の確認：
 
@@ -82,7 +81,8 @@ sudo dmesg | grep -i brcm
 sudo rmmod brcmfmac_wcc brcmfmac && sudo modprobe brcmfmac
 
 # macaddr がズレている場合は NVRAM を再生成
-MACADDR=$(ip link show wlp2s0 | awk '/ether/{print $2}')
+IFACE=$(basename $(readlink -f /sys/class/net/*/device/driver/../.. | grep brcmfmac | head -1)/net/*)
+MACADDR=$(ip link show "$IFACE" | awk '/ether/{print $2}')
 sudo sed -i "s/macaddr=.*/macaddr=${MACADDR}/" /lib/firmware/brcm/brcmfmac43602-pcie.txt
 sudo sed -i "s/macaddr=.*/macaddr=${MACADDR}/" \
   "/lib/firmware/brcm/brcmfmac43602-pcie.Apple Inc.-MacBookPro14,2.txt"
@@ -108,8 +108,6 @@ sudo reboot
 3. DKMS でビルド＆インストール
 4. udev ルール（`91-apple-touchbar.rules`）を配置
 5. modprobe オプション（`apple-touchbar.conf`）を配置
-
-> **カーネルヘッダについて**: デフォルトは `linux-headers` を使用。LTS カーネルを使っている場合は `linux-lts-headers` に変更する。
 
 #### fn キーモード
 
@@ -201,7 +199,7 @@ sudo dmesg | grep -i "patch_cs8409\|APPLE"
 ./scripts/setup-fcitx5.sh
 ```
 
-環境変数（`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`）を `~/.zshenv` に自動追記する。
+`XMODIFIERS=@im=fcitx` を `~/.zshenv` に自動追記する（Wayland環境向け。XWaylandアプリ対応）。
 ログアウト・再ログイン後に有効になる。
 
 ### 8. キーボードカスタマイズ（keyd）
@@ -215,11 +213,10 @@ sudo reboot
 
 スクリプトが行うこと:
 
-1. `keyd` をインストール（AUR 経由）
+1. `keyd` をインストール（公式リポジトリ extra）
 2. `interception-tools` を無効化（keyd に統合）
 3. 内蔵キーボード専用の keyd 設定を配置
-4. GNOME キーバインド調整（`Super+Space` → アクティビティ）
-5. fcitx5 のホットキーを Muhenkan/Henkan に更新
+4. fcitx5 のホットキーを Muhenkan/Henkan に更新
 
 #### キーマッピング
 
@@ -228,8 +225,6 @@ sudo reboot
 | CapsLock   | Escape           | Ctrl     |
 | 左 Command | 英数（Muhenkan） | Super    |
 | 右 Command | かな（Henkan）   | Super    |
-
-> `Super+Space` でアクティビティ表示。`Super+Tab` などの組み合わせはそのまま動作。
 
 ## ディレクトリ構成
 
@@ -254,7 +249,7 @@ macbookpro14-2-for-arch/
 │       └── 91-apple-touchbar.rules
 └── scripts/
     ├── setup.sh           # 一括セットアップ（各項目を yes/no で選択）
-    ├── setup-base.sh      # 汎用パッケージ（バッテリー・温度・ファン）
+    ├── setup-base.sh      # 汎用パッケージ（バッテリー・明るさ・ファン）
     ├── setup-wifi.sh      # Wi-Fi ドライバ・NVRAM セットアップ
     ├── setup-touchbar.sh  # Touch Bar DKMS セットアップ
     ├── setup-touchpad.sh  # タッチパッド DWT 修正
@@ -265,29 +260,17 @@ macbookpro14-2-for-arch/
 
 ## パッケージ一覧
 
-| カテゴリ     | パッケージ              | リポジトリ | 用途                          |
-| ------------ | ----------------------- | ---------- | ----------------------------- |
-| バッテリー   | `tlp`                   | 公式       | バッテリー最適化              |
-| バッテリー   | `powertop`              | 公式       | 電力消費分析                  |
-| 温度管理     | `thermald`              | 公式       | CPU温度管理（Intel）          |
-| 明るさ       | `brightnessctl`         | 公式       | 画面の明るさ調整              |
-| ファン       | `mbpfan`                | AUR        | MacBook用ファン制御           |
-| Wi-Fi        | `b43-firmware`          | AUR        | Broadcom BCM43602ドライバ     |
-| Touch Bar    | `appleibridge` (DKMS)   | 同梱       | Touch Bar有効化               |
-| 日本語入力   | `fcitx5`, `fcitx5-mozc` | 公式       | 日本語入力メソッド            |
-| タッチパッド | `libinput`              | 公式       | トラックパッド対応            |
-| キーリマップ | `keyd`                  | AUR        | CapsLock/Command キーリマップ |
-
-## GNOME 拡張機能
-
-| 拡張機能                                                                    | 用途                                            |
-| --------------------------------------------------------------------------- | ----------------------------------------------- |
-| [Astra Monitor](https://extensions.gnome.org/extension/6682/astra-monitor/) | CPU・メモリ・NVMe・ネットワーク統合モニタリング |
-
-```bash
-# Extension Manager でインストール
-sudo pacman -S --noconfirm gnome-shell-extension-manager
-```
+| カテゴリ     | パッケージ                            | リポジトリ  | 用途                          |
+| ------------ | ------------------------------------- | ----------- | ----------------------------- |
+| バッテリー   | `tlp`                                 | 公式        | バッテリー最適化              |
+| バッテリー   | `powertop`                            | 公式        | 電力消費分析                  |
+| 明るさ       | `brightnessctl`                       | 公式        | 画面の明るさ調整              |
+| ファン       | `mbpfan-git`                          | AUR         | MacBook用ファン制御（任意）   |
+| Touch Bar    | `appleibridge` (DKMS)                 | 同梱        | Touch Bar有効化               |
+| 日本語入力   | `fcitx5`, `fcitx5-mozc`, `fcitx5-gtk` | 公式        | 日本語入力メソッド            |
+| 日本語入力   | `fcitx5-qt`                           | 公式        | Qt アプリ向け入力サポート     |
+| タッチパッド | `libinput`                            | 公式        | トラックパッド対応            |
+| キーリマップ | `keyd`                                | 公式(extra) | CapsLock/Command キーリマップ |
 
 ## 参考リンク
 

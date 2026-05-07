@@ -14,9 +14,11 @@ echo "=== Audio Setup (CS8409 internal speaker) ==="
 
 # 1. Install dependencies
 echo "[1/3] Installing dependencies..."
-# Use linux-headers for the default kernel.
-# For LTS kernel use linux-lts-headers instead.
-sudo pacman -S --noconfirm git dkms base-devel linux-headers
+KERNEL_HEADERS="linux-headers"
+if uname -r | grep -q "\-lts$"; then
+    KERNEL_HEADERS="linux-lts-headers"
+fi
+sudo pacman -S --noconfirm git dkms base-devel "$KERNEL_HEADERS"
 
 # 2. Clone repo
 echo "[2/3] Cloning ${REPO_URL}..."
