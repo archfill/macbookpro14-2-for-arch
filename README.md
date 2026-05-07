@@ -199,8 +199,7 @@ sudo dmesg | grep -i "patch_cs8409\|APPLE"
 ./scripts/setup-fcitx5.sh
 ```
 
-`XMODIFIERS=@im=fcitx` を `~/.zshenv` に自動追記する（Wayland環境向け。XWaylandアプリ対応）。
-ログアウト・再ログイン後に有効になる。
+パッケージのインストールのみ行う。Hyprland の環境変数（`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`）と自動起動（`exec-once = fcitx5 -d`）は dotfiles で管理する。
 
 ### 8. キーボードカスタマイズ（keyd）
 
