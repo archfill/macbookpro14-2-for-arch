@@ -88,6 +88,25 @@ sudo sed -i "s/macaddr=.*/macaddr=${MACADDR}/" \
   "/lib/firmware/brcm/brcmfmac43602-pcie.Apple Inc.-MacBookPro14,2.txt"
 ```
 
+##### WPA2 認証タイムアウト（Authentication timed out）
+
+associate には成功するが WPA2 の 4-way ハンドシェイクがタイムアウトする場合、
+`brcmfmac` がデフォルトで EAPOL をファームウェアにオフロード（FWSUP）しているが、
+BCM43602 の古いファームウェア（2015年版 v7.35.177）がこれを正しく処理できないことが原因。
+
+`setup-wifi.sh` を実行していれば自動で対処されるが、手動で修正する場合：
+
+```bash
+# FWSUP オフロードを無効化（wpa_supplicant がホスト側で EAPOL を処理するようになる）
+echo 'options brcmfmac roamoff=1 feature_disable=0x2000' \
+    | sudo tee /etc/modprobe.d/brcmfmac.conf
+
+# ドライバを再ロード
+sudo rmmod brcmfmac_wcc brcmfmac && sudo modprobe brcmfmac
+```
+
+> `feature_disable=0x2000` は `BRCMF_FEAT_FWSUP`（bit 13）を無効化するフラグ。
+
 ### 3. Touch Bar
 
 MacBook Pro 14,2 の Touch Bar は Apple T1（iBridge）チップ経由で USB 接続されている。

@@ -23,12 +23,12 @@ fi
 echo "  Detected interface: ${IFACE}"
 
 # 1. Install tools
-echo "[1/3] Installing tools..."
+echo "[1/4] Installing tools..."
 sudo pacman -S --noconfirm wget pciutils
 sudo update-pciids -q 2>/dev/null || true
 
 # 2. NVRAM file for 5GHz support
-echo "[2/3] Installing NVRAM file for 5GHz support..."
+echo "[2/4] Installing NVRAM file for 5GHz support..."
 TMP_NVRAM="$(mktemp)"
 wget -q -O "$TMP_NVRAM" "$NVRAM_URL"
 
@@ -46,16 +46,27 @@ sudo cp "${FIRMWARE_DIR}/brcmfmac43602-pcie.txt" \
     "${FIRMWARE_DIR}/brcmfmac43602-pcie.Apple Inc.-MacBookPro14,2.txt"
 rm -f "$TMP_NVRAM"
 
-# 3. TX power limit service
-echo "[3/3] Setting up TX power limit service..."
+# 3. Disable FWSUP (firmware supplicant offload) - required for WPA2 authentication
+# brcmfmac offloads EAPOL to firmware by default, but BCM43602's old firmware
+# (2015, v7.35.177) cannot complete the 4-way handshake, causing auth timeout.
+# feature_disable=0x2000 disables BRCMF_FEAT_FWSUP (bit 13), forcing wpa_supplicant
+# to handle EAPOL directly on the host side.
+echo "[3/4] Disabling firmware supplicant offload (FWSUP)..."
+echo 'options brcmfmac roamoff=1 feature_disable=0x2000' \
+    | sudo tee /etc/modprobe.d/brcmfmac.conf > /dev/null
+echo "  Written to /etc/modprobe.d/brcmfmac.conf"
+
+# 4. TX power limit service (using iw, not iwconfig)
+echo "[4/4] Setting up TX power limit service..."
 sudo tee /etc/systemd/system/set-wifi-power.service > /dev/null << EOF
 [Unit]
 Description=Set WiFi TX Power for Broadcom BCM43602
 After=network.target
 
 [Service]
-ExecStart=/sbin/iwconfig ${IFACE} txpower 10dBm
+ExecStart=/usr/bin/iw dev ${IFACE} set txpower fixed 1000
 Type=oneshot
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
@@ -69,3 +80,4 @@ echo "After reboot, verify with:"
 echo "  ip link show ${IFACE}              # interface is UP"
 echo "  iw phy phy0 info | grep 'Band 2'  # 5GHz support"
 echo "  sudo dmesg | grep -i brcm         # no driver errors"
+echo "  nmcli device connect ${IFACE}     # connect to AP"
