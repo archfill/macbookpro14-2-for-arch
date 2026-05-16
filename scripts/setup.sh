@@ -50,6 +50,11 @@ if confirm "[7] Keyboard customization (keyd: CapsLock + Command IME)?"; then
     echo ""
 fi
 
+if confirm "[8] Bluetooth (bluez + bluez-utils)?"; then
+    bash "${SCRIPTS_DIR}/setup-bluetooth.sh"
+    echo ""
+fi
+
 echo "======================================"
 echo " All selected setups completed."
 echo " Reboot recommended."
